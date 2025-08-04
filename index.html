@@ -8,8 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入Font Awesome -->
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <!-- 引入jQuery -->
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <!-- 引入Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
     
     <!-- 配置Tailwind自定义颜色和字体 -->
     <script>
@@ -48,7 +48,7 @@
     </style>
 </head>
 <body class="bg-gray-50 font-sans text-gray-800 min-h-screen">
-    <main class="container mx-auto px-4 py-8">
+    <main class="container mx-auto px-4 py-8" id="app">
         <!-- 调整布局：操作栏和输入JSON放在左侧 -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- 左侧区域：操作栏 + 输入JSON -->
@@ -60,13 +60,15 @@
                         <div>
                             <div class="flex items-center mb-1">
                                 <label for="className" class="block text-sm font-medium text-gray-700 mr-2">类名:</label>
-                                <span id="classNameHint" class="classname-hint text-warning hidden">
+                                <span v-if="showClassNameHint" class="classname-hint text-warning">
                                     <i class="fa fa-exclamation-triangle mr-1"></i>请使用大写字母开头的驼峰命名法 (PascalCase)
                                 </span>
                             </div>
                             <div class="flex flex-wrap items-center gap-2">
-                                <input type="text" id="className" placeholder="例如: TrackEventModel" value="TrackEventModel" 
-                                    class="flex-1 min-w-[180px] px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-sm">
+                                <input type="text" v-model="className" placeholder="例如: TrackEventModel" 
+                                    class="flex-1 min-w-[180px] px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-sm"
+                                    :class="{ 'border-warning ring-1 ring-warning': showClassNameHint }"
+                                    @input="updateSuggestedFilename">
                             </div>
                         </div>
 
@@ -74,31 +76,31 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">建议文件名:</label>
                             <div class="flex items-center">
-                                <span id="suggestedFilename" class="flex-1 text-sm font-mono bg-gray-100 px-3 py-2 rounded-l-lg text-primary truncate">track_event_model.dart</span>
-                                <button id="copyFilename" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-r-lg transition-colors">
+                                <span class="flex-1 text-sm font-mono bg-gray-100 px-3 py-2 rounded-l-lg text-primary truncate">{{ suggestedFilename }}</span>
+                                <button @click="copyFilename" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-r-lg transition-colors">
                                     <i class="fa fa-copy"></i>
                                 </button>
                             </div>
                         </div>
 
                         <!-- 选项区域 -->
-                        <div class="space-y-2">
+                        <div class="space-y-2 space-x-4">
                             <label class="inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="useJsonKey" checked 
+                                <input type="checkbox" v-model="useJsonKey" 
                                     class="sr-only peer">
                                 <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                                 <span class="ml-2 text-sm font-medium text-gray-700">@JsonKey</span>
                             </label>
 
                             <label class="inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="useCamelCase" checked 
+                                <input type="checkbox" v-model="useCamelCase" 
                                     class="sr-only peer">
                                 <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                                 <span class="ml-2 text-sm font-medium text-gray-700">驼峰命名</span>
                             </label>
 
                             <label class="inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="formatCode" 
+                                <input type="checkbox" v-model="formatCode" 
                                     class="sr-only peer">
                                 <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                                 <span class="ml-2 text-sm font-medium text-gray-700">格式化</span>
@@ -107,11 +109,11 @@
 
                         <!-- 按钮区域 -->
                         <div class="flex items-center gap-2 pt-2">
-                            <button id="clearInput" class="text-gray-600 hover:text-gray-800 text-sm p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex-1">
+                            <button @click="clearInput" class="text-gray-600 hover:text-gray-800 text-sm p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex-1">
                                 <i class="fa fa-trash-o mr-1"></i>清空
                             </button>
 
-                            <button id="convertBtn" class="bg-secondary hover:bg-secondary/90 text-white font-medium py-2 px-4 rounded-lg shadow transition-all transform hover:scale-105 flex-1 flex items-center justify-center">
+                            <button @click="convertJsonToDart" class="bg-secondary hover:bg-secondary/90 text-white font-medium py-2 px-4 rounded-lg shadow transition-all transform hover:scale-105 flex-1 flex items-center justify-center">
                                 <i class="fa fa-exchange mr-2"></i>转换
                             </button>
                         </div>
@@ -126,18 +128,19 @@
                         </h3>
                         <span class="text-xs text-gray-500">Ctrl+Enter 快速转换</span>
                     </div>
-                    <textarea id="jsonInput" placeholder='例如: {"name":"张三","age":20} 或 [{"name":"张三"},{"name":"李四"}]'
-                        class="flex-1 w-full p-4 border border-gray-200 border-t-0 rounded-b-xl font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none min-h-[300px]"></textarea>
+                    <textarea v-model="jsonInput" placeholder='例如: {"name":"张三","age":20} 或 [{"name":"张三"},{"name":"李四"}]'
+                        class="flex-1 w-full p-4 border border-gray-200 border-t-0 rounded-b-xl font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none min-h-[300px]"
+                        @keydown.ctrl.enter="convertJsonToDart"></textarea>
                 </div>
             </div>
 
             <!-- 右侧区域：输出 -->
             <div class="lg:col-span-2 flex flex-col h-full">
                 <!-- 错误提示 -->
-                <div id="errorMessage" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 hidden">
+                <div v-if="showError" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
                     <div class="flex items-center">
                         <i class="fa fa-exclamation-circle mr-3 text-red-500"></i>
-                        <span id="errorText"></span>
+                        <span>{{ errorText }}</span>
                     </div>
                 </div>
 
@@ -146,421 +149,353 @@
                         <h3 class="font-semibold text-gray-800 flex items-center">
                             <i class="fa fa-code text-primary mr-2"></i>生成的Dart代码
                         </h3>
-                        <button id="copyOutput" class="text-gray-500 hover:text-primary text-sm p-1 transition-colors">
+                        <button @click="copyOutput" class="text-gray-500 hover:text-primary text-sm p-1 transition-colors">
                             <i class="fa fa-copy mr-1"></i>复制代码
                         </button>
                     </div>
-                    <textarea id="dartOutput" readonly
-                        class="flex-1 w-full p-4 border border-gray-200 border-t-0 rounded-b-xl font-mono text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none min-h-[500px]"></textarea>
-                    <div id="copyMessage" class="mt-2 text-xs text-green-600 hidden">
+                    <textarea v-model="dartOutput" readonly
+                        class="flex-1 w-full p-4 border border-gray-200 border-t-0 rounded-b-xl font-mono text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none min-h-[500px]"
+                        :class="showCopyMessage ? 'ring-2 ring-primary/30' : ''"></textarea>
+                    <div v-if="showCopyMessage" class="mt-2 text-xs text-green-600">
                         <i class="fa fa-check-circle mr-1"></i>代码已复制到剪贴板
                     </div>
                 </div>
 
                 <!-- 转换统计信息 -->
-                <div id="stats" class="mt-6 bg-white rounded-xl shadow-soft p-4 hidden">
+                <div v-if="showStats" class="mt-6 bg-white rounded-xl shadow-soft p-4">
                     <div class="flex flex-wrap gap-4 text-sm text-gray-600">
-                        <div><i class="fa fa-clock-o text-primary mr-1"></i>转换时间: <span id="convertTime">0</span>ms</div>
-                        <div><i class="fa fa-file-code-o text-primary mr-1"></i>属性数量: <span id="propertyCount">0</span></div>
+                        <div><i class="fa fa-clock-o text-primary mr-1"></i>转换时间: {{ convertTime }}ms</div>
+                        <div><i class="fa fa-file-code-o text-primary mr-1"></i>属性数量: {{ propertyCount }}</div>
                     </div>
                 </div>
             </div>
         </div>
     </main>
     <script>
-        // DOM元素加载完成后执行
-        $(document).ready(function() {
-            // 获取DOM元素
-            const $convertBtn = $('#convertBtn');
-            const $jsonInput = $('#jsonInput');
-            const $dartOutput = $('#dartOutput');
-            const $classNameInput = $('#className');
-            const $classNameHint = $('#classNameHint');
-            const $useJsonKeyCheckbox = $('#useJsonKey');
-            const $useCamelCaseCheckbox = $('#useCamelCase');
-            const $formatCodeCheckbox = $('#formatCode');
-            const $errorMessage = $('#errorMessage');
-            const $errorText = $('#errorText');
-            const $clearInput = $('#clearInput');
-            const $copyOutput = $('#copyOutput');
-            const $copyMessage = $('#copyMessage');
-            const $stats = $('#stats');
-            const $convertTime = $('#convertTime');
-            const $propertyCount = $('#propertyCount');
-            const $themeToggle = $('#themeToggle');
-            // 移除帮助相关DOM元素引用
-            const $suggestedFilename = $('#suggestedFilename');
-            const $copyFilename = $('#copyFilename');
-
-            // 初始化文件名显示
-            updateSuggestedFilename();
-            validateClassName();
-
-            // 类名输入变化时更新建议文件名和验证
-            $classNameInput.on('input', function() {
-                updateSuggestedFilename();
-                validateClassName();
-            });
-
-            // 复制文件名按钮点击事件
-            $copyFilename.on('click', function() {
-                const filename = $suggestedFilename.text();
-                navigator.clipboard.writeText(filename).then(() => {
-                    // 显示复制成功反馈
-                    const originalContent = $copyFilename.html();
-                    $copyFilename.html('<i class="fa fa-check"></i>');
-                    setTimeout(() => {
-                        $copyFilename.html(originalContent);
-                    }, 2000);
-                });
-            });
-
-            // 转换按钮点击事件
-            $convertBtn.on('click', convertJsonToDart);
-
-            // 按Ctrl+Enter触发转换
-            $jsonInput.on('keydown', function(e) {
-                if (e.ctrlKey && e.key === 'Enter') {
-                    convertJsonToDart();
-                }
-            });
-
-            // 清空输入按钮
-            $clearInput.on('click', function() {
-                $jsonInput.val('');
-                $dartOutput.val('');
-                $errorMessage.addClass('hidden');
-                $stats.addClass('hidden');
-                $jsonInput.focus();
-            });
-
-            // 复制输出按钮
-            $copyOutput.on('click', function() {
-                if ($dartOutput.val()) {
-                    $dartOutput.select();
-                    document.execCommand('copy');
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    // 输入输出数据
+                    jsonInput: '',
+                    dartOutput: '',
+                    className: 'TrackEventModel',
                     
-                    // 显示复制成功消息
-                    $copyMessage.removeClass('hidden');
-                    setTimeout(() => {
-                        $copyMessage.addClass('hidden');
-                    }, 2000);
-                }
-            });
-
-            // 帮助按钮和关闭按钮
-            $helpBtn.on('click', function() {
-                $helpModal.removeClass('hidden');
-            });
-
-            $closeHelp.on('click', function() {
-                $helpModal.addClass('hidden');
-            });
-
-            // 点击模态框外部关闭
-            $helpModal.on('click', function(e) {
-                if (e.target === $helpModal[0]) {
-                    $helpModal.addClass('hidden');
-                }
-            });
-
-            // 主题切换功能
-            $themeToggle.on('click', function() {
-                $('body').toggleClass('bg-gray-900 text-white');
-                $('body').toggleClass('bg-gray-50 text-gray-800');
-                
-                $('.bg-white').toggleClass('bg-gray-800');
-                $('.text-gray-600').toggleClass('text-gray-300');
-                $('.text-gray-700').toggleClass('text-gray-200');
-                $('.text-gray-800').toggleClass('text-gray-100');
-                $('.border-gray-200').toggleClass('border-gray-700');
-                $('.bg-gray-50').toggleClass('bg-gray-800');
-                $('.bg-gray-100').toggleClass('bg-gray-700');
-                $('.bg-gray-200').toggleClass('bg-gray-700');
-                
-                const icon = $themeToggle.find('i');
-                if (icon.hasClass('fa-moon-o')) {
-                    icon.removeClass('fa-moon-o').addClass('fa-sun-o');
-                } else {
-                    icon.removeClass('fa-sun-o').addClass('fa-moon-o');
-                }
-            });
-
-            // 验证类名格式并显示/隐藏提示
-            function validateClassName() {
-                const className = $classNameInput.val().trim();
-                // 类名验证规则：必须以大写字母开头，只能包含字母和数字
-                const isValid = /^[A-Z][a-zA-Z0-9]*$/.test(className) || className === '';
-                
-                if (isValid) {
-                    $classNameHint.addClass('hidden');
-                    $classNameInput.removeClass('border-warning ring-1 ring-warning');
-                } else {
-                    $classNameHint.removeClass('hidden');
-                    $classNameInput.addClass('border-warning ring-1 ring-warning');
-                }
-                
-                return isValid;
-            }
-
-            // 更新建议的文件名
-            function updateSuggestedFilename() {
-                let className = $classNameInput.val().trim() || 'MyClass';
-                const filename = classNameToUnderscore(className) + '.dart';
-                $suggestedFilename.text(filename);
-            }
-
-            // 主转换函数
-            function convertJsonToDart() {
-                const startTime = performance.now();
-                try {
-                    // 清除之前的错误信息
-                    $errorMessage.addClass('hidden');
+                    // 选项设置
+                    useJsonKey: true,
+                    useCamelCase: true,
+                    formatCode: false,
                     
-                    // 获取用户输入和选项
-                    const jsonText = $jsonInput.val().trim();
-                    let className = $classNameInput.val().trim() || 'MyClass';
+                    // 状态信息
+                    showError: false,
+                    errorText: '',
+                    showClassNameHint: false,
+                    suggestedFilename: 'track_event_model.dart',
+                    showCopyMessage: false,
+                    showStats: false,
+                    convertTime: 0,
+                    propertyCount: 0,
                     
-                    // 验证类名格式
-                    if (!validateClassName()) {
-                        throw new Error('类名必须以大写字母开头，且只能包含字母和数字（使用PascalCase命名法）');
+                    // 复制按钮状态
+                    copyBtnState: {
+                        filename: false,
+                        output: false
                     }
-                    
-                    const useJsonKey = $useJsonKeyCheckbox.is(':checked');
-                    const useCamelCase = $useCamelCaseCheckbox.is(':checked');
-                    const formatCode = $formatCodeCheckbox.is(':checked');
-
-                    // 验证JSON输入
-                    if (!jsonText) {
-                        throw new Error('请输入JSON数据');
-                    }
-
-                    // 解析JSON
-                    const jsonData = JSON.parse(jsonText);
-                    let dartCode = '';
-                    let propertyCount = 0;
-
-                    // 检查是数组还是对象
-                    const isArrayInput = Array.isArray(jsonData);
-                    
-                    // 无论是数组还是对象，都生成基础类
-                    const baseData = isArrayInput ? jsonData[0] : jsonData;
-                    const classResult = generateDartClass(
-                        baseData, 
-                        className, 
-                        useJsonKey, 
-                        useCamelCase,
-                        isArrayInput
-                    );
-                    
-                    propertyCount = classResult.propertyCount;
-                    dartCode = classResult.code;
-
-                    // 如果需要格式化代码
-                    if (formatCode) {
-                        dartCode = formatDartCode(dartCode);
-                    }
-
-                    // 显示生成的代码并添加动画效果
-                    $dartOutput.val(dartCode);
-                    $dartOutput.parent().addClass('ring-2 ring-primary/30');
-                    setTimeout(() => {
-                        $dartOutput.parent().removeClass('ring-2 ring-primary/30');
-                    }, 500);
-
-                    // 更新统计信息
-                    const endTime = performance.now();
-                    $convertTime.text(Math.round(endTime - startTime));
-                    $propertyCount.text(propertyCount);
-                    $stats.removeClass('hidden');
-
-                } catch (error) {
-                    // 显示错误信息并添加动画效果
-                    $errorText.text(`错误: ${error.message}`);
-                    $errorMessage.removeClass('hidden');
-                    $errorMessage.addClass('animate-pulse');
-                    setTimeout(() => {
-                        $errorMessage.removeClass('animate-pulse');
-                    }, 1000);
-                    $dartOutput.val('');
-                    $stats.addClass('hidden');
-                }
-            }
-
-            // 将类名转换为下划线命名法（用于文件名和part文件）
-            function classNameToUnderscore(className) {
-                // 在每个大写字母前添加下划线（除了第一个字母）
-                return className.replace(/[A-Z]/g, (letter, index) => {
-                    return index === 0 ? letter.toLowerCase() : `_${letter.toLowerCase()}`;
-                });
-            }
-
-            // 生成Dart类代码，返回代码和属性数量
-            function generateDartClass(jsonData, className, useJsonKey, useCamelCase, addArrayMethod) {
-                let code = '';
-                let propertyCount = 0;
-                const properties = [];
+                };
+            },
+            methods: {
+                // 更新建议的文件名
+                updateSuggestedFilename() {
+                    this.validateClassName();
+                    let className = this.className.trim() || 'MyClass';
+                    this.suggestedFilename = this.classNameToUnderscore(className) + '.dart';
+                },
                 
-                // 添加必要的导入
-                if (useJsonKey) {
-                    // 将类名转换为下划线命名法作为part文件名
-                    const underscoreFileName = classNameToUnderscore(className);
-                    code += "import 'package:json_annotation/json_annotation.dart';\n\n";
-                    code += `part '${underscoreFileName}.g.dart';\n\n`;
-                }
+                // 验证类名格式
+                validateClassName() {
+                    const className = this.className.trim();
+                    // 类名验证规则：必须以大写字母开头，只能包含字母和数字
+                    const isValid = /^[A-Z][a-zA-Z0-9]*$/.test(className) || className === '';
+                    this.showClassNameHint = !isValid;
+                    return isValid;
+                },
                 
-                // 添加类注解
-                if (useJsonKey) {
-                    code += `@JsonSerializable()\n`;
-                }
+                // 复制文件名
+                copyFilename() {
+                    navigator.clipboard.writeText(this.suggestedFilename).then(() => {
+                        // 显示复制成功反馈
+                        const btnEl = event.currentTarget;
+                        const originalContent = btnEl.innerHTML;
+                        btnEl.innerHTML = '<i class="fa fa-check"></i>';
+                        setTimeout(() => {
+                            btnEl.innerHTML = originalContent;
+                        }, 2000);
+                    });
+                },
                 
-                // 类定义
-                code += `class ${className} {\n`;
+                // 清空输入
+                clearInput() {
+                    this.jsonInput = '';
+                    this.dartOutput = '';
+                    this.showError = false;
+                    this.showStats = false;
+                    // 聚焦到输入框
+                    document.querySelector('textarea[v-model="jsonInput"]').focus();
+                },
                 
-                // 生成类属性 - 移除了可空标记(?)和final关键字
-                for (const key in jsonData) {
-                    if (jsonData.hasOwnProperty(key)) {
-                        propertyCount++;
-                        const value = jsonData[key];
-                        const dartType = getDartType(value);
-                        let propertyName = key;
-                        
-                        // 如果需要驼峰命名法
-                        if (useCamelCase && /_/.test(key)) {
-                            propertyName = camelCase(key);
-                        }
-                        
-                        properties.push({
-                            originalKey: key,
-                            propertyName: propertyName,
-                            type: dartType
+                // 复制输出代码
+                copyOutput() {
+                    if (this.dartOutput) {
+                        navigator.clipboard.writeText(this.dartOutput).then(() => {
+                            this.showCopyMessage = true;
+                            setTimeout(() => {
+                                this.showCopyMessage = false;
+                            }, 2000);
                         });
+                    }
+                },
+                
+                // 主转换函数
+                convertJsonToDart() {
+                    const startTime = performance.now();
+                    try {
+                        // 清除之前的错误信息
+                        this.showError = false;
                         
-                        // 添加属性注解
-                        if (useJsonKey) {
-                            code += `  @JsonKey(name: '${key}')\n`;
+                        // 获取用户输入和选项
+                        const jsonText = this.jsonInput.trim();
+                        let className = this.className.trim() || 'MyClass';
+                        
+                        // 验证类名格式
+                        if (!this.validateClassName()) {
+                            throw new Error('类名必须以大写字母开头，且只能包含字母和数字（使用PascalCase命名法）');
                         }
                         
-                        // 移除了可空标记(?)和final关键字
-                        code += `  ${dartType} ${propertyName};\n\n`;
+                        // 验证JSON输入
+                        if (!jsonText) {
+                            throw new Error('请输入JSON数据');
+                        }
+
+                        // 解析JSON
+                        const jsonData = JSON.parse(jsonText);
+                        let dartCode = '';
+                        let propertyCount = 0;
+
+                        // 检查是数组还是对象
+                        const isArrayInput = Array.isArray(jsonData);
+                        
+                        // 无论是数组还是对象，都生成基础类
+                        const baseData = isArrayInput ? jsonData[0] : jsonData;
+                        const classResult = this.generateDartClass(
+                            baseData, 
+                            className, 
+                            this.useJsonKey, 
+                            this.useCamelCase,
+                            isArrayInput
+                        );
+                        
+                        this.propertyCount = classResult.propertyCount;
+                        dartCode = classResult.code;
+
+                        // 如果需要格式化代码
+                        if (this.formatCode) {
+                            dartCode = this.formatDartCode(dartCode);
+                        }
+
+                        // 显示生成的代码
+                        this.dartOutput = dartCode;
+
+                        // 更新统计信息
+                        const endTime = performance.now();
+                        this.convertTime = Math.round(endTime - startTime);
+                        this.showStats = true;
+
+                    } catch (error) {
+                        // 显示错误信息
+                        this.errorText = `错误: ${error.message}`;
+                        this.showError = true;
+                        this.dartOutput = '';
+                        this.showStats = false;
                     }
-                }
+                },
                 
-                // 生成构造函数 - 要求所有参数都必须提供
-                code += `  ${className} ({\n`;
-                properties.forEach(prop => {
-                    code += `    required this.${prop.propertyName},\n`;
-                });
-                code += `  });\n\n`;
+                // 将类名转换为下划线命名法（用于文件名）
+                classNameToUnderscore(className) {
+                    // 在每个大写字母前添加下划线（除了第一个字母）
+                    return className.replace(/[A-Z]/g, (letter, index) => {
+                        return index === 0 ? letter.toLowerCase() : `_${letter.toLowerCase()}`;
+                    });
+                },
                 
-                // 生成copyWith方法
-                code += `  ${className} copyWith({\n`;
-                properties.forEach(prop => {
-                    code += `    ${prop.type}? ${prop.propertyName},\n`;
-                });
-                code += `  }) {\n`;
-                code += `    return ${className}(\n`;
-                properties.forEach(prop => {
-                    code += `      ${prop.propertyName}: ${prop.propertyName} ?? this.${prop.propertyName},\n`;
-                });
-                code += `    );\n`;
-                code += `  }\n\n`;
-                
-                // 生成fromMap方法
-                code += `  ${className}.fromMap(Map<String, dynamic> map) {\n`;
-                properties.forEach(prop => {
-                    code += `    ${prop.propertyName} = map['${prop.originalKey}'] as ${prop.type};\n`;
-                });
-                code += `  }\n\n`;
-                
-                // 生成toMap方法
-                code += `  Map<String, dynamic> toMap() {\n`;
-                code += `    return {\n`;
-                properties.forEach(prop => {
-                    code += `      '${prop.originalKey}': ${prop.propertyName},\n`;
-                });
-                code += `    };\n`;
-                code += `  }\n\n`;
-                
-                // 生成fromJson方法（如果启用）
-                if (useJsonKey) {
-                    code += `  factory ${className}.fromJson(Map<String, dynamic> json) =>\n`;
-                    code += `      _$${className}FromJson(json);\n\n`;
+                // 生成Dart类代码
+                generateDartClass(jsonData, className, useJsonKey, useCamelCase, addArrayMethod) {
+                    let code = '';
+                    let propertyCount = 0;
+                    const properties = [];
                     
-                    // 生成toJson方法
-                    code += `  Map<String, dynamic> toJson() => _$${className}ToJson(this);\n\n`;
-                }
-                
-                // 添加数组转换方法：传入data，返回List<className>
-                if (addArrayMethod) {
-                    // 从JSON数组转换的静态方法
-                    code += `  // 将JSON数组转换为${className}列表\n`;
-                    code += `  static List<${className}> fromJsonList(List<dynamic> data) {\n`;
-                    code += `    return data.map((json) => ${className}.fromJson(json as Map<String, dynamic>)).toList();\n`;
+                    // 添加必要的导入
+                    if (useJsonKey) {
+                        // 将类名转换为下划线命名法作为part文件名
+                        const underscoreFileName = this.classNameToUnderscore(className);
+                        code += "import 'package:json_annotation/json_annotation.dart';\n\n";
+                        code += `part '${underscoreFileName}.g.dart';\n\n`;
+                    }
+                    
+                    // 添加类注解
+                    if (useJsonKey) {
+                        code += `@JsonSerializable()\n`;
+                    }
+                    
+                    // 类定义
+                    code += `class ${className} {\n`;
+                    
+                    // 生成类属性
+                    for (const key in jsonData) {
+                        if (jsonData.hasOwnProperty(key)) {
+                            propertyCount++;
+                            const value = jsonData[key];
+                            const dartType = this.getDartType(value);
+                            let propertyName = key;
+                            
+                            // 如果需要驼峰命名法
+                            if (useCamelCase && /_/.test(key)) {
+                                propertyName = this.camelCase(key);
+                            }
+                            
+                            properties.push({
+                                originalKey: key,
+                                propertyName: propertyName,
+                                type: dartType
+                            });
+                            
+                            // 添加属性注解
+                            if (useJsonKey) {
+                                code += `  @JsonKey(name: '${key}')\n`;
+                            }
+                            
+                            code += `  ${dartType} ${propertyName};\n\n`;
+                        }
+                    }
+                    
+                    // 生成构造函数
+                    code += `  ${className} ({\n`;
+                    properties.forEach(prop => {
+                        code += `    required this.${prop.propertyName},\n`;
+                    });
+                    code += `  });\n\n`;
+                    
+                    // 生成copyWith方法
+                    code += `  ${className} copyWith({\n`;
+                    properties.forEach(prop => {
+                        code += `    ${prop.type}? ${prop.propertyName},\n`;
+                    });
+                    code += `  }) {\n`;
+                    code += `    return ${className}(\n`;
+                    properties.forEach(prop => {
+                        code += `      ${prop.propertyName}: ${prop.propertyName} ?? this.${prop.propertyName},\n`;
+                    });
+                    code += `    );\n`;
                     code += `  }\n\n`;
                     
-                    // 从Map数组转换的静态方法
-                    code += `  // 将Map数组转换为${className}列表\n`;
-                    code += `  static List<${className}> fromMapList(List<dynamic> data) {\n`;
-                    code += `    return data.map((map) => ${className}.fromMap(map as Map<String, dynamic>)).toList();\n`;
-                    code += `  }\n`;
-                }
+                    // 生成fromMap方法
+                    code += `  ${className}.fromMap(Map<String, dynamic> map) {\n`;
+                    properties.forEach(prop => {
+                        code += `    ${prop.propertyName} = map['${prop.originalKey}'] as ${prop.type};\n`;
+                    });
+                    code += `  }\n\n`;
+                    
+                    // 生成toMap方法
+                    code += `  Map<String, dynamic> toMap() {\n`;
+                    code += `    return {\n`;
+                    properties.forEach(prop => {
+                        code += `      '${prop.originalKey}': ${prop.propertyName},\n`;
+                    });
+                    code += `    };\n`;
+                    code += `  }\n\n`;
+                    
+                    // 生成fromJson方法（如果启用）
+                    if (useJsonKey) {
+                        code += `  factory ${className}.fromJson(Map<String, dynamic> json) =>\n`;
+                        code += `      _$${className}FromJson(json);\n\n`;
+                        
+                        // 生成toJson方法
+                        code += `  Map<String, dynamic> toJson() => _$${className}ToJson(this);\n\n`;
+                    }
+                    
+                    // 添加数组转换方法
+                    if (addArrayMethod) {
+                        // 从JSON数组转换的静态方法
+                        code += `  // 将JSON数组转换为${className}列表\n`;
+                        code += `  static List<${className}> fromJsonList(List<dynamic> data) {\n`;
+                        code += `    return data.map((json) => ${className}.fromJson(json as Map<String, dynamic>)).toList();\n`;
+                        code += `  }\n\n`;
+                        
+                        // 从Map数组转换的静态方法
+                        code += `  // 将Map数组转换为${className}列表\n`;
+                        code += `  static List<${className}> fromMapList(List<dynamic> data) {\n`;
+                        code += `    return data.map((map) => ${className}.fromMap(map as Map<String, dynamic>)).toList();\n`;
+                        code += `  }\n`;
+                    }
+                    
+                    code += `}`;
+                    
+                    return { code, propertyCount };
+                },
                 
-                code += `}`;
+                // 格式化Dart代码
+                formatDartCode(code) {
+                    // 简单的代码格式化
+                    return code
+                        .replace(/\n{3,}/g, '\n\n')  // 最多两个空行
+                        .replace(/\s+\n/g, '\n')     // 移除行尾空格
+                        .trim() + '\n';              // 确保最后有一个换行
+                },
                 
-                return { code, propertyCount };
-            }
-
-            // 格式化Dart代码
-            function formatDartCode(code) {
-                // 简单的代码格式化
-                return code
-                    .replace(/\n{3,}/g, '\n\n')  // 最多两个空行
-                    .replace(/\s+\n/g, '\n')     // 移除行尾空格
-                    .trim() + '\n';              // 确保最后有一个换行
-            }
-
-            // 根据JSON值获取对应的Dart类型
-            function getDartType(value) {
-                // 处理null值情况
-                if (value === null) {
-                    return 'dynamic';
-                }
-                
-                const type = typeof value;
-                
-                switch (type) {
-                    case 'string':
-                        return 'String';
-                    case 'number':
-                        // 检查是否是整数
-                        return Number.isInteger(value) ? 'int' : 'double';
-                    case 'boolean':
-                        return 'bool';
-                    case 'object':
-                        if (Array.isArray(value)) {
-                            // 数组类型 - 取第一个元素的类型
-                            if (value.length > 0) {
-                                const elementType = getDartType(value[0]);
-                                return `List<${elementType}>`;
-                            }
-                            return 'List<dynamic>';
-                        }
-                        // 对象类型
-                        return 'Map<String, dynamic>';
-                    default:
+                // 根据JSON值获取对应的Dart类型
+                getDartType(value) {
+                    // 处理null值情况
+                    if (value === null) {
                         return 'dynamic';
+                    }
+                    
+                    const type = typeof value;
+                    
+                    switch (type) {
+                        case 'string':
+                            return 'String';
+                        case 'number':
+                            // 检查是否是整数
+                            return Number.isInteger(value) ? 'int' : 'double';
+                        case 'boolean':
+                            return 'bool';
+                        case 'object':
+                            if (Array.isArray(value)) {
+                                // 数组类型 - 取第一个元素的类型
+                                if (value.length > 0) {
+                                    const elementType = this.getDartType(value[0]);
+                                    return `List<${elementType}>`;
+                                }
+                                return 'List<dynamic>';
+                            }
+                            // 对象类型
+                            return 'Map<String, dynamic>';
+                        default:
+                            return 'dynamic';
+                    }
+                },
+                
+                // 下划线转驼峰命名
+                camelCase(str) {
+                    return str.replace(/_([a-z])/g, function (g) {
+                        return g[1].toUpperCase();
+                    });
                 }
-            }
-
-            // 下划线转驼峰命名
-            function camelCase(str) {
-                return str.replace(/_([a-z])/g, function (g) {
-                    return g[1].toUpperCase();
-                });
+            },
+            mounted() {
+                // 初始化
+                this.updateSuggestedFilename();
             }
         });
     </script>
 </body>
 </html>
-    
